@@ -1,0 +1,15 @@
+{
+  "name": "test",
+  "objects": [
+    {
+      "type": "donut",
+      "x": 0,
+      "y": 0,
+      "size": 50,
+      "angle": 30,
+      "transparency": 60,
+      "arc_angle": 320,
+      "donut_radius": 80
+    }
+  ]
+}

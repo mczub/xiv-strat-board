@@ -1,0 +1,223 @@
+{
+    "name": "bigtest",
+    "board_background": "checkered",
+    "objects": [
+        {
+            "type": "waymark_a",
+            "x": 100,
+            "y": 100,
+            "size": 100
+        },
+        {
+            "type": "waymark_b",
+            "x": 412,
+            "y": 100,
+            "size": 100
+        },
+        {
+            "type": "waymark_c",
+            "x": 100,
+            "y": 284,
+            "size": 100
+        },
+        {
+            "type": "waymark_d",
+            "x": 412,
+            "y": 284,
+            "size": 100
+        },
+        {
+            "type": "waymark_1",
+            "x": 256,
+            "y": 50,
+            "size": 100
+        },
+        {
+            "type": "waymark_2",
+            "x": 256,
+            "y": 334,
+            "size": 100
+        },
+        {
+            "type": "waymark_3",
+            "x": 50,
+            "y": 192,
+            "size": 100
+        },
+        {
+            "type": "waymark_4",
+            "x": 462,
+            "y": 192,
+            "size": 100
+        },
+        {
+            "type": "circle_aoe",
+            "x": 256,
+            "y": 192,
+            "size": 200
+        },
+        {
+            "type": "donut",
+            "x": 256,
+            "y": 192,
+            "size": 100,
+            "donut_radius": 50
+        },
+        {
+            "type": "tank",
+            "x": 220,
+            "y": 160,
+            "size": 100
+        },
+        {
+            "type": "tank_1",
+            "x": 180,
+            "y": 192,
+            "size": 100
+        },
+        {
+            "type": "tank_2",
+            "x": 220,
+            "y": 224,
+            "size": 100
+        },
+        {
+            "type": "healer",
+            "x": 292,
+            "y": 160,
+            "size": 100
+        },
+        {
+            "type": "healer_1",
+            "x": 332,
+            "y": 192,
+            "size": 100
+        },
+        {
+            "type": "healer_2",
+            "x": 292,
+            "y": 224,
+            "size": 100
+        },
+        {
+            "type": "dps_1",
+            "x": 200,
+            "y": 130,
+            "size": 100
+        },
+        {
+            "type": "dps_2",
+            "x": 312,
+            "y": 130,
+            "size": 100
+        },
+        {
+            "type": "dps_3",
+            "x": 200,
+            "y": 254,
+            "size": 100
+        },
+        {
+            "type": "dps_4",
+            "x": 312,
+            "y": 254,
+            "size": 100
+        },
+        {
+            "type": "paladin",
+            "x": 80,
+            "y": 50,
+            "size": 80
+        },
+        {
+            "type": "warrior",
+            "x": 120,
+            "y": 50,
+            "size": 80
+        },
+        {
+            "type": "dark_knight",
+            "x": 160,
+            "y": 50,
+            "size": 80
+        },
+        {
+            "type": "gunbreaker",
+            "x": 200,
+            "y": 50,
+            "size": 80
+        },
+        {
+            "type": "white_mage",
+            "x": 312,
+            "y": 50,
+            "size": 80
+        },
+        {
+            "type": "scholar",
+            "x": 352,
+            "y": 50,
+            "size": 80
+        },
+        {
+            "type": "astrologian",
+            "x": 392,
+            "y": 50,
+            "size": 80
+        },
+        {
+            "type": "sage",
+            "x": 432,
+            "y": 50,
+            "size": 80
+        },
+        {
+            "type": "small_enemy",
+            "x": 256,
+            "y": 100,
+            "size": 120
+        },
+        {
+            "type": "large_enemy",
+            "x": 256,
+            "y": 280,
+            "size": 150
+        },
+        {
+            "type": "stack",
+            "x": 150,
+            "y": 150,
+            "size": 100
+        },
+        {
+            "type": "gaze",
+            "x": 362,
+            "y": 150,
+            "size": 100
+        },
+        {
+            "type": "tower",
+            "x": 150,
+            "y": 234,
+            "size": 100
+        },
+        {
+            "type": "proximity",
+            "x": 362,
+            "y": 234,
+            "size": 100
+        },
+        {
+            "type": "attack_1",
+            "x": 256,
+            "y": 140,
+            "size": 100
+        },
+        {
+            "type": "attack_2",
+            "x": 256,
+            "y": 244,
+            "size": 100
+        }
+    ]
+}

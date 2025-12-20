@@ -1,0 +1,36 @@
+{
+    "name": "test",
+    "board_background": "checkered",
+    "objects": [
+        {
+            "type": "waymark_a",
+            "x": 100,
+            "y": 100,
+            "size": 100
+        },
+        {
+            "type": "waymark_b",
+            "x": 412,
+            "y": 100,
+            "size": 100
+        },
+        {
+            "type": "waymark_c",
+            "x": 100,
+            "y": 284,
+            "size": 100
+        },
+        {
+            "type": "waymark_d",
+            "x": 412,
+            "y": 284,
+            "size": 100
+        },
+        {
+            "type": "tank",
+            "x": 256,
+            "y": 150,
+            "size": 100
+        }
+    ]
+}

@@ -1,0 +1,24 @@
+{
+    "name": "raid",
+    "board_background": "grey",
+    "objects": [
+        {
+            "type": "circle_aoe",
+            "x": 256,
+            "y": 192,
+            "size": 150
+        },
+        {
+            "type": "tank",
+            "x": 230,
+            "y": 192,
+            "size": 100
+        },
+        {
+            "type": "healer",
+            "x": 282,
+            "y": 192,
+            "size": 100
+        }
+    ]
+}
