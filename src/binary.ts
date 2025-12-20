@@ -141,13 +141,15 @@ export function parseBinary(data: Uint8Array): DecodeResult {
 
     // Storage for object properties
     const positions: Array<{ x: number; y: number }> = [];
-    const backgrounds: number[] = [];
+    const backgrounds: number[] = [];  // Tag 6: also used for rotation angle in rotatable objects
     const sizes: number[] = [];
     const colors: Array<{ r: number; g: number; b: number; a: number }> = [];
-    const arcAngles: number[] = [];
-    const donutRadii: number[] = [];
+    const tag10: number[] = [];  // Tag 10: arc angle for fan_aoe, width for line_aoe, horiz count for knockback
+    const tag11: number[] = []; // Tag 11: donut radius, height for line_aoe, vert count/display count
+    const tag12: number[] = []; // Tag 12: reserved
+    const textContents: string[] = []; // Text content for text objects
+    const objectFlags: number[] = []; // Per-object flags from Tag 4
     let boardBackground = 1; // default: none
-    let flags = 1; // default: visible
 
     // Parse tags
     while (reader.remaining >= 2) {
@@ -160,15 +162,15 @@ export function parseBinary(data: Uint8Array): DecodeResult {
             const countVal = reader.readUint16();
 
             if (countVal > 1) {
-                // Multi-object: skip n × 2 bytes
+                // Multi-object: read per-object flags
                 if (reader.remaining < countVal * 2) break;
                 for (let i = 0; i < countVal; i++) {
-                    reader.readUint16();
+                    objectFlags.push(reader.readUint16());
                 }
             } else {
                 // Single object: read flags
                 if (reader.remaining < 2) break;
-                flags = reader.readUint16();
+                objectFlags.push(reader.readUint16());
             }
         } else if (tag === 5) {
             // Positions
@@ -182,13 +184,14 @@ export function parseBinary(data: Uint8Array): DecodeResult {
                 positions.push({ x, y });
             }
         } else if (tag === 6) {
-            // Object backgrounds
+            // Object backgrounds / rotation angles (stored as signed i16)
             if (reader.remaining < 4) break;
             reader.readUint16(); // always 1
             const count = reader.readUint16();
 
             for (let i = 0; i < count && reader.remaining >= 2; i++) {
-                backgrounds.push(reader.readUint16());
+                // Read as signed to support negative angles
+                backgrounds.push(reader.readInt16());
             }
         } else if (tag === 7) {
             // Sizes (u8, packed)
@@ -224,7 +227,7 @@ export function parseBinary(data: Uint8Array): DecodeResult {
             const count = reader.readUint16();
 
             for (let i = 0; i < count && reader.remaining >= 2; i++) {
-                arcAngles.push(reader.readUint16());
+                tag10.push(reader.readUint16());
             }
         } else if (tag === 11) {
             // Donut radii
@@ -233,25 +236,41 @@ export function parseBinary(data: Uint8Array): DecodeResult {
             const count = reader.readUint16();
 
             for (let i = 0; i < count && reader.remaining >= 2; i++) {
-                donutRadii.push(reader.readUint16());
+                tag11.push(reader.readUint16());
             }
         } else if (tag === 12) {
-            // Reserved
+            // Rotation angles (for line_aoe)
             if (reader.remaining < 4) break;
-            reader.readUint16();
+            reader.readUint16(); // always 1
             const count = reader.readUint16();
 
-            // Skip count × 2 bytes
             for (let i = 0; i < count && reader.remaining >= 2; i++) {
-                reader.readUint16();
+                tag12.push(reader.readUint16());
             }
         } else if (tag === 3) {
-            // Footer with board background
-            if (reader.remaining < 6) break;
-            reader.readUint16(); // always 1
-            reader.readUint16(); // always 1
-            boardBackground = reader.readUint16();
-            break; // Footer is always last
+            // Tag 3 can be:
+            // - Footer: [3][1][1][board_bg] when second value is 1
+            // - Text content: [3][text_length][text_bytes...] when second value > 1
+            if (reader.remaining < 2) break;
+            const val = reader.readUint16();
+
+            if (val === 1) {
+                // This is the footer
+                if (reader.remaining < 4) break;
+                reader.readUint16(); // always 1
+                boardBackground = reader.readUint16();
+                break; // Footer is always last
+            } else {
+                // This is text content for a text object
+                // val is the length of the text content
+                if (reader.remaining < val) break;
+                const textBytes = reader.readBytes(val);
+                const textContent = new TextDecoder('utf-8', { fatal: false })
+                    .decode(textBytes)
+                    .replace(/\0+$/, ''); // Remove null padding
+                textContents.push(textContent);
+                // Continue parsing other tags
+            }
         } else {
             // Unknown tag, skip
             break;
@@ -275,8 +294,17 @@ export function parseBinary(data: Uint8Array): DecodeResult {
         // Size
         obj.size = sizes[i] && sizes[i] > 0 ? sizes[i] : 100;
 
-        // Background
-        if (backgrounds[i] !== undefined && backgrounds[i] > 0) {
+        // Background vs Angle handling
+        // For rotatable objects (fan_aoe, line_aoe, line_stack, linear_knockback, line, etc.),
+        // Tag 6 stores the rotation angle (as signed i16), not the background
+        const rotatableTypes = new Set([10, 11, 12, 15, 16, 17, 18, 19, 110]); // fan_aoe, line_aoe, line, line_stack, etc.
+        if (rotatableTypes.has(iconId)) {
+            // Tag 6 is angle for rotatable objects (can be negative)
+            if (backgrounds[i] !== undefined && backgrounds[i] !== 0) {
+                obj.angle = backgrounds[i];
+            }
+        } else if (backgrounds[i] !== undefined && backgrounds[i] > 0) {
+            // Tag 6 is background for non-rotatable objects
             const bgName = OBJECT_BACKGROUND_TYPES[backgrounds[i]];
             obj.background = bgName as BackgroundType ?? backgrounds[i];
         }
@@ -291,23 +319,81 @@ export function parseBinary(data: Uint8Array): DecodeResult {
             }
         }
 
-        // Arc angle
-        if (arcAngles[i] && arcAngles[i] > 0) {
-            obj.arcAngle = arcAngles[i];
-        }
-
-        // Donut radius
-        if (donutRadii[i] && donutRadii[i] > 0) {
-            obj.donutRadius = donutRadii[i];
-        }
-
-        // Hidden/locked flags (single object only)
-        if (n === 1) {
-            if (flags === 0) {
-                obj.hidden = true;
-            } else if (flags === 9 || (flags & 0x08)) {
-                obj.locked = true;
+        // Type-specific handling of Tags 10, 11, 12
+        if (iconId === 11) {
+            // line_aoe: Tag 10 = width, Tag 11 = height
+            if (tag10[i] && tag10[i] > 0) {
+                obj.width = tag10[i];
             }
+            if (tag11[i] && tag11[i] > 0) {
+                obj.height = tag11[i];
+            }
+        } else if (iconId === 10) {
+            // fan_aoe: Tag 10 = arc angle
+            if (tag10[i] && tag10[i] > 0) {
+                obj.arcAngle = tag10[i];
+            }
+        } else if (iconId === 12) {
+            // line: Tag 10 = endX * 10, Tag 11 = endY * 10, Tag 12 = height
+            if (tag10[i] && tag10[i] > 0) {
+                obj.endX = tag10[i] / 10;
+            }
+            if (tag11[i] && tag11[i] > 0) {
+                obj.endY = tag11[i] / 10;
+            }
+            if (tag12[i] && tag12[i] > 0) {
+                obj.height = tag12[i];
+            }
+        } else if (iconId === 15) {
+            // line_stack: Tag 11 = display count
+            if (tag11[i] && tag11[i] > 0) {
+                obj.displayCount = tag11[i];
+            }
+        } else if (iconId === 110) {
+            // linear_knockback: Tag 10 = horizontal count, Tag 11 = vertical count
+            if (tag10[i] && tag10[i] > 0) {
+                obj.horizontalCount = tag10[i];
+            }
+            if (tag11[i] && tag11[i] > 0) {
+                obj.verticalCount = tag11[i];
+            }
+        } else if (iconId === 14) {
+            // donut: Tag 11 = inner radius
+            if (tag11[i] && tag11[i] > 0) {
+                obj.donutRadius = tag11[i];
+            }
+        } else {
+            // Default handling for arc angle and donut radius
+            if (tag10[i] && tag10[i] > 0) {
+                obj.arcAngle = tag10[i];
+            }
+            if (tag11[i] && tag11[i] > 0) {
+                obj.donutRadius = tag11[i];
+            }
+        }
+
+        // Text content for text objects (icon ID 100)
+        if (iconId === 100 && textContents.length > 0) {
+            obj.text = textContents.shift();
+        }
+
+        // Flags from Tag 4: bits encode hidden, horizontal flip, vertical flip, locked
+        // Bit 0 (0x01): visible (1) / hidden (0)
+        // Bit 1 (0x02): horizontal flip
+        // Bit 2 (0x04): vertical flip
+        // Bit 3 (0x08): locked
+        const objFlags = objectFlags[i] ?? 1;
+        if ((objFlags & 0x01) === 0) {
+            obj.hidden = true;
+        }
+        if (objFlags & 0x02) {
+            obj.horizontalFlip = true;
+        }
+        if (objFlags & 0x04) {
+            obj.verticalFlip = true;
+        }
+        if (objFlags & 0x08) {
+            obj.locked = true;
         }
 
         objects.push(obj);

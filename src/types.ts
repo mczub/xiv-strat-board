@@ -199,6 +199,39 @@ export interface StrategyObject {
     /** Donut inner radius (0-240) */
     donutRadius?: number;
 
+    /** Width for line_aoe objects */
+    width?: number;
+
+    /** Height for line_aoe objects */
+    height?: number;
+
+    /** Rotation angle for objects (degrees) - used by fan_aoe, line_aoe, line_stack, linear_knockback, etc. */
+    angle?: number;
+
+    /** Text content for text objects */
+    text?: string;
+
+    /** End X coordinate for line objects (0-512) */
+    endX?: number;
+
+    /** End Y coordinate for line objects (0-384) */
+    endY?: number;
+
+    /** Display count for line_stack */
+    displayCount?: number;
+
+    /** Horizontal count for linear_knockback */
+    horizontalCount?: number;
+
+    /** Vertical count for linear_knockback */
+    verticalCount?: number;
+
+    /** Whether object is horizontally flipped */
+    horizontalFlip?: boolean;
+
+    /** Whether object is vertically flipped */
+    verticalFlip?: boolean;
+
     /** Whether object is hidden */
     hidden?: boolean;
 
