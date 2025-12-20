@@ -32,7 +32,7 @@ export const BOUNDS = {
     /** Maximum donut radius */
     maxDonut: 255,
     /** Maximum number of objects per board */
-    maxObjects: 1000,
+    maxObjects: 50,
     /** Maximum name length (bytes) */
     maxNameLength: 7,
 } as const;

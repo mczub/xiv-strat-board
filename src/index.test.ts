@@ -269,3 +269,23 @@ describe('board backgrounds', () => {
         });
     }
 });
+
+describe('decode external share codes', () => {
+    it('should decode Full Party share code with 12-byte name and 17 objects', () => {
+        // This share code has a 12-byte name field instead of the standard 8 bytes
+        const shareCode = '[stgy:aGz4kwGPfaf8h3GsnyGY8RcjsvIuShQZmcZtFzkdlUwjlvyIRWEM51OI5bb5wPoW9i5fdIqflSXuQuxO-ssbT0x7z7vVNICXYJLPw7BJrkNEkkdL1PsxTGiDSFSfaQVelWWN705StQ-Cfi25ZbbkEPv2nSuoIdeqFF8554DetpRZgJT+LXbHdZD2nCqwbMyhNX2kFAsLY-RNiNgl+BPNiNOPOLG+NrovN-mG+Qy8MQrjKFGrLUELwIq-]';
+
+        const decoded = decode(shareCode);
+
+        expect(decoded.name).toBe('Full Party');
+        expect(decoded.boardBackground).toBe('checkered');
+        expect(decoded.objects).toHaveLength(17);
+
+        // Verify specific objects
+        expect(decoded.objects[0].type).toBe('large_enemy');
+        expect(decoded.objects[1].type).toBe('tank_1');
+        expect(decoded.objects[2].type).toBe('tank_2');
+        expect(decoded.objects[9].type).toBe('waymark_a');
+        expect(decoded.objects[16].type).toBe('waymark_4');
+    });
+});

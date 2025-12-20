@@ -97,7 +97,7 @@ class BinaryReader {
  * @throws {Error} If binary format is invalid
  */
 export function parseBinary(data: Uint8Array): DecodeResult {
-    if (data.length < 0x24) {
+    if (data.length < 0x1C) {
         throw new Error('Binary data is too short for header');
     }
 
@@ -106,11 +106,19 @@ export function parseBinary(data: Uint8Array): DecodeResult {
     // Parse header
     const version = reader.readUint32();
 
-    // Skip fields at 0x04-0x1B
-    reader.seek(0x1c);
+    // Skip fields at 0x04-0x17
+    reader.seek(0x18);
+    reader.readUint16(); // object_count_header (always 1)
 
-    // Read name at 0x1C-0x23 (8 bytes)
-    const nameBytes = reader.readBytes(8);
+    // Read name length at 0x1A
+    const nameLength = reader.readUint16();
+
+    if (data.length < 0x1C + nameLength) {
+        throw new Error('Binary data is too short for name field');
+    }
+
+    // Read name at 0x1C with variable length
+    const nameBytes = reader.readBytes(nameLength);
     const name = new TextDecoder('utf-8', { fatal: false })
         .decode(nameBytes)
         .replace(/\0+$/, '')
