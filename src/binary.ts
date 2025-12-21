@@ -335,10 +335,14 @@ export function parseBinary(data: Uint8Array): DecodeResult {
 
         // Color - only for objects with settable colors: line_aoe (11), line (12), text (100)
         const colorableTypes = new Set([11, 12, 100]);
-        if (colors[i] && colorableTypes.has(iconId)) {
+        if (colors[i]) {
             const { r, g, b, a } = colors[i];
-            const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-            obj.color = hex;
+            // Color is only settable for certain types
+            if (colorableTypes.has(iconId)) {
+                const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                obj.color = hex;
+            }
+            // Transparency applies to all objects
             if (a > 0) {
                 obj.transparency = a;
             }
