@@ -161,6 +161,10 @@ See `ICON_TYPE_IDS` export for the complete list.
 
 This package works in both Node.js and browsers. It uses `pako` for zlib compression, which is browser-compatible.
 
+## Special Thanks
+
+Special thanks to @MinhP for reverse engineering work on the share code format and @ennea for an [awesome viewer implementation](https://ennea.github.io/ffxiv-strategy-board-viewer/).
+
 ## License
 
 MIT
