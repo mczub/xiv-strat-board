@@ -224,7 +224,7 @@ describe('color handling', () => {
     it('should roundtrip hex color', () => {
         const board: StrategyBoard = {
             objects: [
-                { type: 'shape_circle', x: 256, y: 192, color: '#ff0000' },
+                { type: 'line_aoe', x: 256, y: 192, color: '#ff0000' },
             ],
         };
 
@@ -237,7 +237,7 @@ describe('color handling', () => {
     it('should roundtrip color with transparency', () => {
         const board: StrategyBoard = {
             objects: [
-                { type: 'circle_aoe', x: 256, y: 192, color: '#00ff00', transparency: 128 },
+                { type: 'line_aoe', x: 256, y: 192, color: '#00ff00', transparency: 128 },
             ],
         };
 

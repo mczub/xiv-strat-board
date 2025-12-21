@@ -124,17 +124,37 @@ export function parseBinary(data: Uint8Array): DecodeResult {
         .replace(/\0+$/, '')
         .trim();
 
-    // Parse icon list (Tag 2 entries)
+    // Parse icon list (Tag 2 entries) with interleaved text content (Tag 3)
+    // Text content appears immediately after text icons (iconId 100) in the stream
     const icons: number[] = [];
+    const textContents: string[] = []; // Text content for text objects
     while (reader.remaining >= 4) {
         const marker = reader.readUint16();
-        if (marker !== 2) {
-            // Not a Tag 2 entry, rewind and break
+        if (marker === 2) {
+            // Icon entry
+            const iconId = reader.readUint16();
+            icons.push(iconId);
+        } else if (marker === 3) {
+            // Tag 3: text content (length > 1) or footer indicator (length = 1)
+            const val = reader.readUint16();
+            if (val > 1) {
+                // Text content - appears after text icon entries
+                if (reader.remaining < val) break;
+                const textBytes = reader.readBytes(val);
+                const textContent = new TextDecoder('utf-8', { fatal: false })
+                    .decode(textBytes)
+                    .replace(/\0+$/, ''); // Remove null padding
+                textContents.push(textContent);
+            } else {
+                // Footer indicator (val === 1), rewind and let main loop handle it
+                reader.seek(reader.position - 4);
+                break;
+            }
+        } else {
+            // Other tag, rewind and break to main tag parsing
             reader.seek(reader.position - 2);
             break;
         }
-        const iconId = reader.readUint16();
-        icons.push(iconId);
     }
 
     const n = icons.length;
@@ -147,7 +167,6 @@ export function parseBinary(data: Uint8Array): DecodeResult {
     const tag10: number[] = [];  // Tag 10: arc angle for fan_aoe, width for line_aoe, horiz count for knockback
     const tag11: number[] = []; // Tag 11: donut radius, height for line_aoe, vert count/display count
     const tag12: number[] = []; // Tag 12: reserved
-    const textContents: string[] = []; // Text content for text objects
     const objectFlags: number[] = []; // Per-object flags from Tag 4
     let boardBackground = 1; // default: none
 
@@ -155,7 +174,12 @@ export function parseBinary(data: Uint8Array): DecodeResult {
     while (reader.remaining >= 2) {
         const tag = reader.readUint16();
 
-        if (tag === 4) {
+        if (tag === 2) {
+            // Additional icon entry (can appear after text content)
+            if (reader.remaining < 2) break;
+            const iconId = reader.readUint16();
+            icons.push(iconId);
+        } else if (tag === 4) {
             // Object count header with flags
             if (reader.remaining < 4) break;
             reader.readUint16(); // always 1
@@ -309,8 +333,9 @@ export function parseBinary(data: Uint8Array): DecodeResult {
             obj.background = bgName as BackgroundType ?? backgrounds[i];
         }
 
-        // Color
-        if (colors[i]) {
+        // Color - only for objects with settable colors: line_aoe (11), line (12), text (100)
+        const colorableTypes = new Set([11, 12, 100]);
+        if (colors[i] && colorableTypes.has(iconId)) {
             const { r, g, b, a } = colors[i];
             const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
             obj.color = hex;
@@ -357,8 +382,11 @@ export function parseBinary(data: Uint8Array): DecodeResult {
             if (tag11[i] && tag11[i] > 0) {
                 obj.verticalCount = tag11[i];
             }
-        } else if (iconId === 14) {
-            // donut: Tag 11 = inner radius
+        } else if (iconId === 17) {
+            // donut: Tag 10 = arc angle, Tag 11 = inner radius
+            if (tag10[i] && tag10[i] > 0) {
+                obj.arcAngle = tag10[i];
+            }
             if (tag11[i] && tag11[i] > 0) {
                 obj.donutRadius = tag11[i];
             }
