@@ -8,7 +8,6 @@ import type { DecodeResult, BackgroundType } from './types';
 import {
     ICON_TYPES,
     BOARD_BACKGROUND_TYPES,
-    OBJECT_BACKGROUND_TYPES,
 } from './constants';
 import type { sanitizeObject } from './validation';
 
@@ -318,19 +317,9 @@ export function parseBinary(data: Uint8Array): DecodeResult {
         // Size
         obj.size = sizes[i] && sizes[i] > 0 ? sizes[i] : 100;
 
-        // Background vs Angle handling
-        // For rotatable objects (fan_aoe, line_aoe, line_stack, linear_knockback, line, etc.),
-        // Tag 6 stores the rotation angle (as signed i16), not the background
-        const rotatableTypes = new Set([10, 11, 12, 15, 16, 17, 18, 19, 110]); // fan_aoe, line_aoe, line, line_stack, etc.
-        if (rotatableTypes.has(iconId)) {
-            // Tag 6 is angle for rotatable objects (can be negative)
-            if (backgrounds[i] !== undefined && backgrounds[i] !== 0) {
-                obj.angle = backgrounds[i];
-            }
-        } else if (backgrounds[i] !== undefined && backgrounds[i] > 0) {
-            // Tag 6 is background for non-rotatable objects
-            const bgName = OBJECT_BACKGROUND_TYPES[backgrounds[i]];
-            obj.background = bgName as BackgroundType ?? backgrounds[i];
+        // Angle - Tag 6 stores rotation angle for all objects except text (100)
+        if (iconId !== 100 && backgrounds[i] !== undefined && backgrounds[i] !== 0) {
+            obj.angle = backgrounds[i];
         }
 
         // Color - only for objects with settable colors: line_aoe (11), line (12), text (100)
