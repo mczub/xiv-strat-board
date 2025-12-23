@@ -162,16 +162,16 @@ describe('encode validation', () => {
         })).toThrow('Unknown icon type');
     });
 
-    it('should sanitize name to max 7 characters', () => {
+    it('should sanitize name to max 20 characters', () => {
         const board: StrategyBoard = {
-            name: 'verylongboardname',
+            name: 'this is a very long board name that exceeds twenty characters',
             objects: [{ type: 'tank', x: 256, y: 192 }],
         };
 
         const shareCode = encode(board);
         const decoded = decode(shareCode);
 
-        expect(decoded.name?.length).toBeLessThanOrEqual(7);
+        expect(decoded.name?.length).toBeLessThanOrEqual(20);
     });
 
     it('should clamp coordinates to valid range', () => {

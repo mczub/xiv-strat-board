@@ -315,7 +315,7 @@ export function parseBinary(data: Uint8Array): DecodeResult {
         };
 
         // Size
-        obj.size = sizes[i] && sizes[i] > 0 ? sizes[i] : 100;
+        obj.size = (iconId === 100) ? 100 : (sizes[i] && sizes[i] > 0 ? sizes[i] : 100);
 
         // Angle - Tag 6 stores rotation angle for all objects except text (100)
         if (iconId !== 100 && backgrounds[i] !== undefined && backgrounds[i] !== 0) {
@@ -376,11 +376,11 @@ export function parseBinary(data: Uint8Array): DecodeResult {
                 obj.verticalCount = tag11[i];
             }
         } else if (iconId === 17) {
-            // donut: Tag 10 = arc angle, Tag 11 = inner radius
-            if (tag10[i] && tag10[i] > 0) {
+            // donut: Tag 10 = arc angle, Tag 11 = inner radius (0 is valid - means no inner hole)
+            if (tag10[i] !== undefined && tag10[i] > 0) {
                 obj.arcAngle = tag10[i];
             }
-            if (tag11[i] && tag11[i] > 0) {
+            if (tag11[i] !== undefined) {
                 obj.donutRadius = tag11[i];
             }
         } else {
@@ -443,22 +443,37 @@ export function buildBinary(data: {
     const n = objects.length;
 
     // Calculate required buffer size
-    // Header: 0x24 bytes (36 bytes)
+    // Header: 0x1c bytes (28 bytes) + nameLen (variable, padded to even)
     // Tag 2 entries: n * 4 bytes
+    // Tag 3 text content: 4 bytes header + paddedLen per text object
     // Tag 4: 8 bytes for single, 6 + n*2 for multi
     // Tag 5 (positions): 6 + n * 4
-    // Tag 6 (backgrounds): 6 + n * 2
+    // Tag 6 (angles): 6 + n * 2
     // Tag 7 (sizes): 6 + n + (n % 2 === 1 ? 1 : 0) padding
     // Tag 8 (colors): 6 + n * 4
-    // Tag 10 (arc): 6 + n * 2
-    // Tag 11 (donut): 6 + n * 2
-    // Tag 12 (reserved): 6 + n * 2
+    // Tag 10 (type-specific): 6 + n * 2
+    // Tag 11 (type-specific): 6 + n * 2
+    // Tag 12 (type-specific): 6 + n * 2
     // Tag 3 (footer): 8
+    const nameBytes = new TextEncoder().encode(name.slice(0, 20));
+    // Name field must be at least 8 bytes, padded to 4-byte alignment with null terminator (game expectation)
+    const namePaddedLen = Math.max(8, (nameBytes.length + 1 + 3) & ~3);
+    const headerSize = 0x1c + namePaddedLen;
     const tag4Size = n <= 1 ? 8 : (6 + n * 2);
     const tag7Size = 6 + n + (n % 2 === 1 ? 1 : 0);
+    // Calculate text content size
+    let textContentSize = 0;
+    for (const obj of objects) {
+        if (obj.typeId === 100 && obj.text) {
+            const textLen = new TextEncoder().encode(obj.text).length;
+            // Pad to 4-byte alignment with null terminator (game expectation)
+            const paddedLen = Math.max(8, (textLen + 1 + 3) & ~3);
+            textContentSize += 4 + paddedLen; // 4 bytes for Tag 3 header + text content
+        }
+    }
     const bufferSize = n === 0
-        ? 0x24 + 8  // Header + footer only
-        : 0x24 + n * 4 + tag4Size + (6 + n * 4) + (6 + n * 2) + tag7Size + (6 + n * 4) + (6 + n * 2) + (6 + n * 2) + (6 + n * 2) + 8;
+        ? headerSize + 8  // Header + footer only
+        : headerSize + n * 4 + textContentSize + tag4Size + (6 + n * 4) + (6 + n * 2) + tag7Size + (6 + n * 4) + (6 + n * 2) + (6 + n * 2) + (6 + n * 2) + 8;
 
     const buffer = new ArrayBuffer(bufferSize);
     const view = new DataView(buffer);
@@ -489,18 +504,29 @@ export function buildBinary(data: {
     writeUint32(0); // Payload size - will update
     writeUint16(0); // Padding
     writeUint16(1); // Object count header
-    writeUint16(8); // Name length
+    // Name length (calculated above)
+    writeUint16(namePaddedLen);
 
-    // Name (8 bytes, null-padded)
-    const nameBytes = new TextEncoder().encode(name.slice(0, 7));
-    for (let i = 0; i < 8; i++) {
+    // Name (variable length, null-padded to even)
+    for (let i = 0; i < namePaddedLen; i++) {
         writeUint8(nameBytes[i] ?? 0);
     }
 
-    // Object list (Tag 2 entries)
+    // Object list (Tag 2 entries) with interleaved text content (Tag 3)
     for (const obj of objects) {
         writeUint16(2);
         writeUint16(obj.typeId);
+        // Text content immediately follows text icons (typeId 100)
+        if (obj.typeId === 100 && obj.text) {
+            const textBytes = new TextEncoder().encode(obj.text);
+            // Pad to 4-byte alignment with null terminator (game expectation)
+            const paddedLen = Math.max(8, (textBytes.length + 1 + 3) & ~3);
+            writeUint16(3);
+            writeUint16(paddedLen);
+            for (let i = 0; i < paddedLen; i++) {
+                writeUint8(textBytes[i] ?? 0);
+            }
+        }
     }
 
     // Skip property tags for empty boards
@@ -511,21 +537,25 @@ export function buildBinary(data: {
         writeUint16(4);
         writeUint16(1);
         const obj = objects[0];
-        let flagsVal = 1; // visible
-        if (obj.hidden) {
-            flagsVal = 0;
-        } else if (obj.locked) {
-            flagsVal = 9;
-        }
+        let flagsVal = 1; // visible by default
+        if (obj.hidden) flagsVal &= ~0x01;
+        if (obj.horizontalFlip) flagsVal |= 0x02;
+        if (obj.verticalFlip) flagsVal |= 0x04;
+        if (obj.locked) flagsVal |= 0x08;
         writeUint16(1);
         writeUint16(flagsVal);
     } else {
-        // Tag 4 - Multi-object header
+        // Tag 4 - Multi-object header with per-object flags
         writeUint16(4);
         writeUint16(1);
         writeUint16(n);
-        for (let i = 0; i < n; i++) {
-            writeUint16(1);
+        for (const obj of objects) {
+            let flagsVal = 1; // visible by default
+            if (obj.hidden) flagsVal &= ~0x01;
+            if (obj.horizontalFlip) flagsVal |= 0x02;
+            if (obj.verticalFlip) flagsVal |= 0x04;
+            if (obj.locked) flagsVal |= 0x08;
+            writeUint16(flagsVal);
         }
     }
 
@@ -540,12 +570,12 @@ export function buildBinary(data: {
             writeInt16(Math.round(obj.y * 10));
         }
 
-        // Tag 6 - Object backgrounds
+        // Tag 6 - Rotation angles (signed i16)
         writeUint16(6);
         writeUint16(1);
         writeUint16(n);
         for (const obj of objects) {
-            writeUint16(obj.background);
+            writeInt16(obj.angle);
         }
 
         // Tag 7 - Sizes
@@ -571,28 +601,60 @@ export function buildBinary(data: {
             writeUint8(obj.transparency);
         }
 
-        // Tag 10 - Arc angles
+        // Tag 10 - Type-specific: arcAngle, width, endX, horizontalCount
         writeUint16(10);
         writeUint16(1);
         writeUint16(n);
         for (const obj of objects) {
-            writeUint16(obj.arcAngle);
+            if (obj.typeId === 11) {
+                // line_aoe: width
+                writeUint16(obj.width);
+            } else if (obj.typeId === 12) {
+                // line: endX * 10
+                writeUint16(Math.round(obj.endX * 10));
+            } else if (obj.typeId === 110) {
+                // linear_knockback: horizontalCount
+                writeUint16(obj.horizontalCount);
+            } else {
+                // fan_aoe, donut, others: arcAngle
+                writeUint16(obj.arcAngle);
+            }
         }
 
-        // Tag 11 - Donut radii
+        // Tag 11 - Type-specific: donutRadius, height, endY, displayCount, verticalCount
         writeUint16(11);
         writeUint16(1);
         writeUint16(n);
         for (const obj of objects) {
-            writeUint16(obj.donutRadius);
+            if (obj.typeId === 11) {
+                // line_aoe: height
+                writeUint16(obj.height);
+            } else if (obj.typeId === 12) {
+                // line: endY * 10
+                writeUint16(Math.round(obj.endY * 10));
+            } else if (obj.typeId === 15) {
+                // line_stack: displayCount
+                writeUint16(obj.displayCount);
+            } else if (obj.typeId === 110) {
+                // linear_knockback: verticalCount
+                writeUint16(obj.verticalCount);
+            } else {
+                // donut, others: donutRadius
+                writeUint16(obj.donutRadius);
+            }
         }
 
-        // Tag 12 - Reserved
+        // Tag 12 - Type-specific: height for line
         writeUint16(12);
         writeUint16(1);
         writeUint16(n);
-        for (let i = 0; i < n; i++) {
-            writeUint16(0);
+        for (const obj of objects) {
+            if (obj.typeId === 12) {
+                // line: height
+                writeUint16(obj.height);
+            } else {
+                writeUint16(0);
+            }
         }
     }
 

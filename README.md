@@ -75,7 +75,7 @@ Decodes a share code to a strategy board.
 
 ```typescript
 interface StrategyBoard {
-  name?: string;                    // Max 7 characters
+  name?: string;                    // Max 20 characters
   boardBackground?: BackgroundType;
   objects: StrategyObject[];
 }
@@ -89,7 +89,7 @@ interface StrategyObject {
   typeId?: number;        // Optional numeric ID (overrides type)
   x: number;              // 0-512, center at 256
   y: number;              // 0-384, center at 192
-  size?: number;          // 1-255, default 100
+  size?: number;          // 10-200, default 100 (text always 100)
   background?: BackgroundType;
 
   // Color (only for line_aoe, line, text)
@@ -97,8 +97,8 @@ interface StrategyObject {
   transparency?: number;  // 0-255
 
   // AoE properties
-  arcAngle?: number;      // 10-360 for fan_aoe and donut
-  donutRadius?: number;   // 0-255 for donut inner radius
+  arcAngle?: number;      // 0-360, intervals of 10
+  donutRadius?: number;   // 0-255 (0 = full circle/no hole)
 
   // Line AoE properties
   width?: number;         // Width for line_aoe
@@ -117,7 +117,7 @@ interface StrategyObject {
   verticalCount?: number;     // Vertical count for linear_knockback
 
   // Text objects
-  text?: string;          // Text content for text objects
+  text?: string;          // Text content (max 30 chars)
 
   // Flip states
   horizontalFlip?: boolean;

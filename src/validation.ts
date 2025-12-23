@@ -20,9 +20,9 @@ export const BOUNDS = {
     /** Maximum Y coordinate */
     maxY: 484,
     /** Minimum size percentage */
-    minSize: 1,
+    minSize: 10,
     /** Maximum size percentage */
-    maxSize: 255,
+    maxSize: 200,
     /** Minimum arc angle */
     minArc: 0,
     /** Maximum arc angle */
@@ -33,8 +33,10 @@ export const BOUNDS = {
     maxDonut: 255,
     /** Maximum number of objects per board */
     maxObjects: 50,
+    /** Maximum number of text objects per board */
+    maxTextObjects: 8,
     /** Maximum name length (bytes) */
-    maxNameLength: 7,
+    maxNameLength: 20,
 } as const;
 
 /**
@@ -265,15 +267,25 @@ export function sanitizeObject(
     x: number;
     y: number;
     size: number;
-    background: number;
+    angle: number;
     colorR: number;
     colorG: number;
     colorB: number;
     transparency: number;
     arcAngle: number;
     donutRadius: number;
+    width: number;
+    height: number;
+    endX: number;
+    endY: number;
+    displayCount: number;
+    horizontalCount: number;
+    verticalCount: number;
+    text: string;
     hidden: boolean;
     locked: boolean;
+    horizontalFlip: boolean;
+    verticalFlip: boolean;
 } {
     if (!obj || typeof obj !== 'object') {
         throw new Error(`Object at index ${index} is not a valid object`);
@@ -303,16 +315,26 @@ export function sanitizeObject(
         typeId,
         x: sanitizeCoordinate(obj.x, true),
         y: sanitizeCoordinate(obj.y, false),
-        size: sanitizeSize(obj.size),
-        background: validateBackground(obj.background),
+        size: typeId === 100 ? 100 : sanitizeSize(obj.size),
+        angle: Math.round(obj.angle ?? 0),
         colorR: sanitizeColorComponent(colorR),
         colorG: sanitizeColorComponent(colorG),
         colorB: sanitizeColorComponent(colorB),
         transparency: sanitizeColorComponent(obj.transparency ?? 0),
-        arcAngle: clamp(Math.round(obj.arcAngle ?? 0), BOUNDS.minArc, BOUNDS.maxArc),
+        arcAngle: clamp(Math.round((obj.arcAngle ?? 0) / 10) * 10, BOUNDS.minArc, BOUNDS.maxArc),
         donutRadius: clamp(Math.round(obj.donutRadius ?? 0), BOUNDS.minDonut, BOUNDS.maxDonut),
+        width: Math.round(obj.width ?? 0),
+        height: Math.round(obj.height ?? 0),
+        endX: sanitizeCoordinate(obj.endX ?? 0, true),
+        endY: sanitizeCoordinate(obj.endY ?? 0, false),
+        displayCount: Math.round(obj.displayCount ?? 0),
+        horizontalCount: Math.round(obj.horizontalCount ?? 0),
+        verticalCount: Math.round(obj.verticalCount ?? 0),
+        text: typeof obj.text === 'string' ? obj.text.slice(0, 30) : '',
         hidden: Boolean(obj.hidden),
         locked: Boolean(obj.locked),
+        horizontalFlip: Boolean(obj.horizontalFlip),
+        verticalFlip: Boolean(obj.verticalFlip),
     };
 }
 
@@ -338,6 +360,12 @@ export function sanitizeBoard(board: StrategyBoard): {
 
     if (board.objects.length > BOUNDS.maxObjects) {
         throw new Error(`Board has too many objects (max ${BOUNDS.maxObjects})`);
+    }
+
+    // Count text objects
+    const textCount = board.objects.filter(obj => obj.type === 'text' || obj.typeId === 100).length;
+    if (textCount > BOUNDS.maxTextObjects) {
+        throw new Error(`Board has too many text objects (max ${BOUNDS.maxTextObjects})`);
     }
 
     return {
