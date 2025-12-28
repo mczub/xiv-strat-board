@@ -353,10 +353,11 @@ export function parseBinary(data: Uint8Array): DecodeResult {
             }
         } else if (iconId === 12) {
             // line: Tag 10 = endX * 10, Tag 11 = endY * 10, Tag 12 = height
-            if (tag10[i] && tag10[i] > 0) {
+            // Note: 0 is a valid coordinate value for endX/endY
+            if (tag10[i] !== undefined) {
                 obj.endX = tag10[i] / 10;
             }
-            if (tag11[i] && tag11[i] > 0) {
+            if (tag11[i] !== undefined) {
                 obj.endY = tag11[i] / 10;
             }
             if (tag12[i] && tag12[i] > 0) {
