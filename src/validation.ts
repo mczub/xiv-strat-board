@@ -311,6 +311,13 @@ export function sanitizeObject(
         }
     }
 
+    // Default count values depend on object type:
+    // - linear_knockback (110): horizontalCount/verticalCount default to 1
+    // - line_stack (15): displayCount defaults to 1
+    const defaultDisplayCount = typeId === 15 ? 1 : 0;
+    const defaultHorizCount = typeId === 110 ? 1 : 0;
+    const defaultVertCount = typeId === 110 ? 1 : 0;
+
     return {
         typeId,
         x: sanitizeCoordinate(obj.x, true),
@@ -327,9 +334,9 @@ export function sanitizeObject(
         height: Math.round(obj.height ?? 0),
         endX: sanitizeCoordinate(obj.endX ?? 0, true),
         endY: sanitizeCoordinate(obj.endY ?? 0, false),
-        displayCount: Math.round(obj.displayCount ?? 0),
-        horizontalCount: Math.round(obj.horizontalCount ?? 0),
-        verticalCount: Math.round(obj.verticalCount ?? 0),
+        displayCount: Math.round(obj.displayCount ?? defaultDisplayCount),
+        horizontalCount: Math.round(obj.horizontalCount ?? defaultHorizCount),
+        verticalCount: Math.round(obj.verticalCount ?? defaultVertCount),
         text: typeof obj.text === 'string' ? obj.text.slice(0, 30) : '',
         hidden: Boolean(obj.hidden),
         locked: Boolean(obj.locked),
