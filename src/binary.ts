@@ -364,7 +364,7 @@ export function parseBinary(data: Uint8Array): DecodeResult {
                 obj.height = tag12[i];
             }
         } else if (iconId === 15) {
-            // line_stack: Tag 11 = display count
+            // line_stack: Tag 10 = always 1, Tag 11 = display count
             if (tag11[i] && tag11[i] > 0) {
                 obj.displayCount = tag11[i];
             }
@@ -602,7 +602,7 @@ export function buildBinary(data: {
             writeUint8(obj.transparency);
         }
 
-        // Tag 10 - Type-specific: arcAngle, width, endX, horizontalCount
+        // Tag 10 - Type-specific: arcAngle, width, endX, horizontalCount, displayCount
         writeUint16(10);
         writeUint16(1);
         writeUint16(n);
@@ -616,13 +616,16 @@ export function buildBinary(data: {
             } else if (obj.typeId === 110) {
                 // linear_knockback: horizontalCount
                 writeUint16(obj.horizontalCount);
+            } else if (obj.typeId === 15) {
+                // line_stack: Tag 10 = always 1 (horizontal count?)
+                writeUint16(1);
             } else {
                 // fan_aoe, donut, others: arcAngle
                 writeUint16(obj.arcAngle);
             }
         }
 
-        // Tag 11 - Type-specific: donutRadius, height, endY, displayCount, verticalCount
+        // Tag 11 - Type-specific: donutRadius, height, endY, verticalCount
         writeUint16(11);
         writeUint16(1);
         writeUint16(n);
@@ -634,7 +637,7 @@ export function buildBinary(data: {
                 // line: endY * 10
                 writeUint16(Math.round(obj.endY * 10));
             } else if (obj.typeId === 15) {
-                // line_stack: displayCount
+                // line_stack: displayCount goes in BOTH Tag 10 and Tag 11
                 writeUint16(obj.displayCount);
             } else if (obj.typeId === 110) {
                 // linear_knockback: verticalCount

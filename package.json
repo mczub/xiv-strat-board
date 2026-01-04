@@ -1,6 +1,6 @@
 {
   "name": "xiv-strat-board",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Encoder and decoder for FF14 Strategy Board share codes",
   "type": "module",
   "main": "./dist/index.cjs",
